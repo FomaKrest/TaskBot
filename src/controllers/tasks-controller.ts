@@ -1,8 +1,7 @@
 import { ObjectId } from "mongodb";
 import Task from "../models/task.js";
-import { Collection } from "mongoose";
 
-const addTask = (userId: string, taskText: string) => {
+const addTask = (userId: number, taskText: string) => {
     const task = new Task({
       ownerId: userId,
       task: {
@@ -17,21 +16,21 @@ const addTask = (userId: string, taskText: string) => {
         .catch( (err) => { return err } );
 }
 
-const getAllTasks = (callback: Function) => {
+const getAllTasks = (userId: number, callback: Function) => {
   Task
-    .find()
+    .find({ownerId: userId})
     .then((result) => {callback(result)})
     .catch( (err) => { callback(err) } );
 }
 
-const getUnfinishedTasks = (userId: string, callback: Function) => {
+const getUnfinishedTasks = (userId: number, callback: Function) => {
   Task
     .find({ownerId: userId, "task.isFinished": false})
     .then( (result) => {console.log(result); callback(result)})
     .catch( (err) => { callback([err]) } );
 }
 
-const getTasksAmount = (userId: string, callback: Function) => {
+const getTasksAmount = (userId: number, callback: Function) => {
   Task
     .countDocuments({ownerId: userId, "task.isFinished": true})
     .then( (finishedTasks) => { 

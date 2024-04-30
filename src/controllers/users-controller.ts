@@ -3,15 +3,15 @@ import User from "../models/user.js"
 
 const addUser = (userId:string) => {
   User
-    .countDocuments({id: userId})
-    .then((count) => {
-      if (count == 0) {
+    .exists({id: userId})
+    .then((user) => {
+      if (user == null) {
 
-        const user = new User({
+        const newUser = new User({
           id: userId,
         });
       
-        user
+        newUser
             .save()
             .then((result) => {
                 return result

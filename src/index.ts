@@ -8,8 +8,11 @@ import { addUser} from "./controllers/users-controller.js";
 import { ObjectId } from 'mongodb';
 
 
-const MONGODB_URL = "mongodb://localhost:27017/TaskManager";
-let BOT_TOKEN = "6836286484:AAG7lS5yMHcPKVwiCTqCQIibHWbKcii_B6I"
+import dotenv from "dotenv";
+dotenv.config();
+///config
+const MONGODB_URL: string = process.env.MONGODB_URL!;
+let BOT_TOKEN = process.env.BOT_TOKEN!;
 
 mongoose
     .connect(MONGODB_URL)
@@ -53,15 +56,15 @@ async function notifyAboutTasks(ctx: any) {
 }
 
 function homePage(ctx: any) {
-  addUser(ctx.message.from.id.toString())
+  addUser(ctx.message.from.id)
   ctx.session.reply_to_message = "start";
   getTasksAmount(ctx.message.from.id, (finishedTasksLength: number, activeTasksLength: number) => {
-    ctx.reply(`Привет, ${ctx.message!.from.username}!\nЯ бот для отслеживания заданий. Сейчас у тебя ${activeTasksLength} активных и ${finishedTasksLength} выполненных заданий. Нажми на кнопку ниже, чтобы создать задание`,
+    ctx.reply(`Привет, ${ctx.message!.from.username}!\nЯ бот для отслеживания заданий. Сейчас у тебя ${activeTasksLength} активных и ${finishedTasksLength} выполненных заданий. Нажми на кнопку \"🎟 Создать новое задание\", чтобы создать задание`,
       Markup
         .keyboard(["🎟 Создать новое задание", "🎟 Личный кабинет", "🎟 Включить напоминания", "🎟 Мои задачи"])
         .resize()
       )
-    cron.schedule('* * * * *', () => {
+    cron.schedule('30 * * * *', () => {
       notifyAboutTasks(ctx)
     });
   })
@@ -85,10 +88,12 @@ bot.hears("🎟 Включить напоминания", ctx => {
 
 bot.hears("🎟 Мои задачи", ctx => {
   ctx.session.reply_to_message = "start";
-  getAllTasks((tasks: {task: {text: string, isFinished: boolean}}[]) => {
+  getAllTasks(ctx.update.message.from.id, (tasks: {task: {text: string, isFinished: boolean}}[]) => {
     let message = "";
-    for (let task of tasks) {
-      message += task["task"]["text"] + " - " + (task["task"]["isFinished"] ? "Выполнено" : "Не выполнено") + "\n";
+    tasks.reverse();
+    for (let i in tasks) {
+      let task = tasks[i].task
+      message += task.text + " - " + (task.isFinished ? "🟢 Выполнено" : "🔴 Не выполнено") + "\n";
     }
     ctx.reply(message);
   })
@@ -102,7 +107,7 @@ bot.hears("🎟 Личный кабинет", ctx => {
 
 bot.on("text", (ctx) => {
   if (ctx.session.reply_to_message == "create_task") {
-    addTask(ctx.update.message.from.id.toString(), ctx.message.text);
+    addTask(ctx.update.message.from.id, ctx.message.text);
     ctx.reply(`Создана задача "${ctx.message.text}" успешно создана`);
     ctx.session.reply_to_message = "start";
   } else if (ctx.session.reply_to_message == "tasks_notification") {
@@ -120,19 +125,14 @@ bot.on("text", (ctx) => {
       ctx.session.reply_to_message = "start";
       ctx.reply( `Пока что это все задачи. Хотите добавить что-то ещё?`, Markup
         .keyboard(["🎟 Создать новое задание", "🎟 Личный кабинет", "🎟 Включить напоминания", "🎟 Мои задачи"])
-        //.oneTime()
         .resize())
     }
     }
 })
 
 
-//bot.on ('message',(ctx) => {
-//  console.log(ctx.message);
-//} )
-
-
 bot.launch();
+
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
